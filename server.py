@@ -14,19 +14,25 @@ BLENDER_PORT = 9876
 
 def send_to_blender(data):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(60)
+    sock.settimeout(30)
     try:
         sock.connect((BLENDER_HOST, BLENDER_PORT))
         sock.sendall((json.dumps(data) + "\n").encode())
         buf = b""
         while True:
-            chunk = sock.recv(8192)
-            if not chunk:
+            try:
+                chunk = sock.recv(8192)
+                if not chunk:
+                    break
+                buf += chunk
+            except socket.timeout:
                 break
-            buf += chunk
-            if b"\n" in buf:
-                break
-        return json.loads(buf.strip())
+        if not buf:
+            return {"error": "blender returned empty response"}
+        try:
+            return json.loads(buf.strip())
+        except json.JSONDecodeError:
+            return {"raw_response": buf.decode("utf-8", errors="replace")}
     except Exception as e:
         return {"error": str(e)}
     finally:
@@ -58,6 +64,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8088
     print(f"[server] listening on 0.0.0.0:{port}, forwarding to blender {BLENDER_HOST}:{BLENDER_PORT}")
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
