@@ -38,12 +38,15 @@ def send_command(data, timeout=TIMEOUT):
 
     start = time.time()
     while time.time() - start < timeout:
-        r = requests.get(f"{RELAY_SERVER}/result/{cmd_id}", timeout=10)
-        info = r.json()
-        if info["status"] == "done":
-            return info["result"]
-        if info["status"] == "not_found":
-            return {"error": "command not found on server"}
+        try:
+            r = requests.get(f"{RELAY_SERVER}/result/{cmd_id}", timeout=10)
+            info = r.json()
+            if info["status"] == "done":
+                return info["result"]
+            if info["status"] == "not_found":
+                return {"error": "command not found on server"}
+        except requests.exceptions.ConnectionError:
+            pass
         time.sleep(0.5)
 
     return {"error": "timeout waiting for blender response"}
