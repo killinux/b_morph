@@ -1,47 +1,44 @@
-# Blender Remote Control via Relay
+# Blender Remote Control
 
-通过 Linux 中继服务器，让 Mac 上的 Claude 远程控制 Windows 上的 Blender。
+Mac 上的 Claude 通过 ngrok 隧道远程控制 Windows 上的 Blender。零依赖，纯 Python stdlib。
 
 ```
-Mac (Claude)                Linux (49.233.189.223)           Windows
-client.py  --HTTP POST-->  relay_server.py  <--HTTP poll--  poller.py --TCP--> Blender MCP (:9876)
-           <--HTTP GET---                   ---HTTP POST-->
+Mac (Claude)                    ngrok                        Windows
+client.py  --HTTPS-->  xxxx.ngrok-free.app  --HTTP-->  server.py --TCP--> Blender MCP (:9876)
 ```
 
 ## 部署步骤
 
-### 1. Linux 服务器 (49.233.189.223)
+### 1. Windows
+
+启动 Blender，确认 blender-mcp 插件已启用（端口 9876），然后：
 
 ```bash
-pip install flask
-python relay_server.py
-# 监听 0.0.0.0:5000
+python server.py 8000
+ngrok http 8000
 ```
 
-### 2. Windows 机器
+ngrok 会显示一个公网地址如 `https://xxxx.ngrok-free.app`。
 
-确保 Blender 已运行且 blender-mcp 插件已启用 (端口 9876)，然后：
+### 2. Mac
 
-```bash
-pip install requests
-python poller.py
-# 开始轮询中继服务器
-```
-
-### 3. Mac 本机
+将 `client.py` 中的 `SERVER` 改为 ngrok 给的地址，然后：
 
 ```bash
-pip install requests
-
-# 查看服务状态
-python mac/client.py status
+# 检查连通性
+python3 client.py status
 
 # 获取 Blender 场景信息
-python mac/client.py get_scene_info
+python3 client.py get_scene_info
 
-# 在 Blender 中执行 Python 代码
-python mac/client.py execute '{"code": "import bpy; bpy.ops.mesh.primitive_cube_add()"}'
+# 执行 Blender Python 代码
+python3 client.py execute '{"code": "import bpy; bpy.ops.mesh.primitive_cube_add()"}'
 
-# 创建物体
-python mac/client.py create '{"type": "cube", "name": "MyCube", "location": [1,2,3]}'
+# 创建/修改/删除物体
+python3 client.py create '{"type": "cube", "name": "MyCube", "location": [1,2,3]}'
+python3 client.py modify '{"name": "MyCube", "location": [0,0,5]}'
+python3 client.py delete '{"name": "MyCube"}'
+
+# 发送任意 JSON
+python3 client.py raw '{"type": "get_scene_info"}'
 ```
