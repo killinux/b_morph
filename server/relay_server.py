@@ -12,6 +12,7 @@ app = Flask(__name__)
 commands = {}
 pending_queue = []
 lock = threading.Lock()
+poll_event = threading.Event()  # Windows 长轮询等待信号
 
 
 @app.route("/command", methods=["POST"])
@@ -28,17 +29,30 @@ def post_command():
             "created_at": time.time(),
         }
         pending_queue.append(cmd_id)
+        poll_event.set()
+        poll_event.clear()
     return jsonify({"id": cmd_id, "status": "pending"})
 
 
 @app.route("/poll", methods=["GET"])
 def poll_command():
-    """Windows 轮询待处理命令"""
+    """Windows 长轮询：有命令立即返回，没有则挂起等待最多 30 秒"""
+    timeout = min(float(request.args.get("timeout", 30)), 60)
+
     with lock:
         if pending_queue:
             cmd_id = pending_queue.pop(0)
             commands[cmd_id]["status"] = "processing"
             return jsonify({"id": cmd_id, "data": commands[cmd_id]["data"]})
+
+    poll_event.wait(timeout=timeout)
+
+    with lock:
+        if pending_queue:
+            cmd_id = pending_queue.pop(0)
+            commands[cmd_id]["status"] = "processing"
+            return jsonify({"id": cmd_id, "data": commands[cmd_id]["data"]})
+
     return jsonify({"id": None, "data": None})
 
 

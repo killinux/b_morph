@@ -12,7 +12,7 @@ import sys
 RELAY_SERVER = "http://49.233.189.223:5000"
 BLENDER_HOST = "127.0.0.1"
 BLENDER_PORT = 9876
-POLL_INTERVAL = 1
+LONG_POLL_TIMEOUT = 30
 
 
 def send_to_blender(data):
@@ -50,11 +50,14 @@ def main():
 
     while True:
         try:
-            resp = requests.get(f"{RELAY_SERVER}/poll", timeout=10)
+            resp = requests.get(
+                f"{RELAY_SERVER}/poll",
+                params={"timeout": LONG_POLL_TIMEOUT},
+                timeout=LONG_POLL_TIMEOUT + 5,
+            )
             msg = resp.json()
 
             if msg.get("id") is None:
-                time.sleep(POLL_INTERVAL)
                 continue
 
             cmd_id = msg["id"]
@@ -70,11 +73,11 @@ def main():
                 timeout=10,
             )
         except requests.exceptions.ConnectionError:
-            print("[poller] relay server unreachable, retrying...")
+            print("[poller] relay server unreachable, retrying in 3s...")
             time.sleep(3)
         except Exception as e:
             print(f"[poller] error: {e}")
-            time.sleep(POLL_INTERVAL)
+            time.sleep(1)
 
 
 if __name__ == "__main__":
