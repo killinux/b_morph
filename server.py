@@ -87,12 +87,15 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        msg = b'{"status":"ok"}'
-        self.send_header("Content-Length", len(msg))
-        self.end_headers()
-        self.wfile.write(msg)
+        try:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            msg = b'{"status":"ok"}'
+            self.send_header("Content-Length", len(msg))
+            self.end_headers()
+            self.wfile.write(msg)
+        except Exception:
+            pass
 
     def log_message(self, fmt, *args):
         print(f"[http] {args[0]}")
