@@ -60,8 +60,6 @@ def send_to_blender(data):
 
 
 class Handler(BaseHTTPRequestHandler):
-    timeout = 600
-
     def do_POST(self):
         try:
             length = int(self.headers.get("Content-Length", 0))
@@ -105,6 +103,4 @@ if __name__ == "__main__":
     print(f"[server] listening on 0.0.0.0:{port}")
     print(f"[server] forwarding to blender {BLENDER_HOST}:{BLENDER_PORT}")
     print(f"[server] socket timeout: {SOCKET_TIMEOUT}s")
-    server = HTTPServer(("0.0.0.0", port), Handler)
-    server.timeout = 600
-    server.serve_forever()
+    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
